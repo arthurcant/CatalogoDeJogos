@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using CatalogoDeJogos.InputModel;
 using CatalogoDeJogos.Services;
+using CatalogoDeJogos.ViewModel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,42 +19,93 @@ namespace CatalogoDeJogos.Controllers.V1
 
         private readonly IJogoService _jogoService;
 
-        [HttpGet]
-        public async Task<ActionResult<List<object>>> Obter()
+        public JogosController(IJogoService jogoService)
         {
-            return Ok();
+            _jogoService = jogoService;
         }
 
-        [HttpGet("{idJogo:guid}")]
-        public async Task<ActionResult<object>> Obter(Guid idJogo)
+       [HttpGet]
+        public async Task<ActionResult<IEnumerable<JogoViewModel>>> Obter([FromQuery, Range(1, int.MaxValue)] int pagina = 1, [FromQuery, Range(1, 50)] int quantidade = 5)
         {
+            var jogos = await _jogoService.Obter(pagina, quantidade);
+            if(jogos.Count() == 0)
+                return NoContent();
+            
+            return Ok(jogos);
+        }
+        
+
+
+        [HttpGet("{idJogo:guid}")]
+        public async Task<ActionResult<JogoViewModel>> Obter([FromRoute] Guid idJogo)
+        {
+            var jogo = await _jogoService.Obter(idJogo);
+
+            if (jogo == null)
+                return NoContent();
+
             return Ok();
         }
 
         [HttpPost]
-        public async Task<ActionResult<object>> IniserirJogo(JogoInputModel jogo)
+        public async Task<ActionResult<JogoViewModel>> inserirJogo([FromBody] JogoInputModel jogoInputModel)
         {
-            return Ok();
+            try
+            {
+                var jogo = await _jogoService.Inserir(jogoInputModel);
+
+                return Ok(jogo);
+            }
+            catch(Exception ex)
+            {
+                return UnprocessableEntity("Já existe um jogo com este nome para esta produtora.");
+            }
         }
 
         [HttpPut("{idJogo:guid}")]
-        public async Task<ActionResult> AtualizarJogo(Guid idJogom, JogoInputModel jogo)
+        public async Task<ActionResult> AtualizarJogo([FromRoute] Guid idJogo, [FromBody] JogoInputModel jogoInputModel)
         {
-            return Ok();
+            try{
+                await _jogoService.Atualizar(idJogo, jogoInputModel);
+
+                return Ok();
+            }
+            catch(Exception ex)
+            {
+                return NotFound("Não existe este Jogo");
+            }
+
         }
 
         [HttpPatch("{idJogo:guid}/preco/{preco:double}")]
-        public async Task<ActionResult> atualizarJogo(Guid idJogo, double preco)
+        public async Task<ActionResult> AtualizarJogo([FromRoute] Guid idJogo, [FromRoute] double preco)
         {
-            return Ok();
+            try{
+                await _jogoService.Atualizar(idJogo, preco);
+
+                return Ok();
+            }
+            catch(Exception ex)
+            {
+                return NotFound("Não existe este Jogo");
+            }    
         }
 
-        // [HttpDelete("{idJogo:guid}")]
-        // public async Task<AcceptedResult> ApagarJogo(Guid idJogo)
-        // {
-        //     return Ok();
-        // }
+        [HttpDelete("{idJogo:guid}")]
+        public async Task<ActionResult> AtualizarJogo([FromRoute] Guid idJogo)
+        {
+            try{
+                await _jogoService.Remover(idJogo);
 
+                return Ok();
+            }
+            catch(Exception ex)
+            {
+                return NotFound("Não existe este Jogo");
+            }
+        }
+
+        //async e await; readonly; Task<ActionResult<List<object>>>
 
 
 
